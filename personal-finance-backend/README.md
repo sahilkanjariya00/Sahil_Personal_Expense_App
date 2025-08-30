@@ -1,3 +1,16 @@
+pytesseract → Python bindings for Tesseract (calls the system binary).
+
+opencv-python-headless → preprocessing (binarize, denoise, deskew).
+
+pdfplumber → parse text layer from digital PDFs (no OCR).
+
+pdf2image → convert scanned PDFs to images (needs Poppler).
+
+pip install "paddleocr>=2.6"  # will pull paddlepaddle; on CPU it’s fine for small loads
+
+tesseract --version
+pdftoppm -v
+
 # Tables
 ## users
 id            INTEGER PRIMARY KEY
