@@ -11,15 +11,22 @@ DEFAULT_CATEGORIES = [
     "Electronics",
     "Family",
     "Personal Care",
-    "Other"
+    "Other",
 ]
 
 def seed_categories(session: Session) -> None:
     # Global defaults use user_id = None
-    existing = set(
-        name for (name,) in session.exec(select(Category.name).where(Category.user_id.is_(None))).all()
+    result = session.exec(
+        select(Category.name).where(Category.user_id.is_(None))
     )
-    new_items = [Category(user_id=None, name=name) for name in DEFAULT_CATEGORIES if name not in existing]
+    # In many SQLModel versions, `result` is already a ScalarResult of str
+    existing_names = set(result.all())
+
+    new_items = [
+        Category(user_id=None, name=name)
+        for name in DEFAULT_CATEGORIES
+        if name not in existing_names
+    ]
     if new_items:
         session.add_all(new_items)
         session.commit()
