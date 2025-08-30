@@ -24,6 +24,7 @@ import { fetchTransactions, type Transaction } from "../../APIs/GetTransactions"
 import { ROWSPERPAGEOPTOINS } from "../../Util/constants";
 import { TRANSACTIONS } from "../../Util/Endpoint";
 import { createQueryUrl } from "../../Util/helper";
+import { useNavigate } from "react-router-dom";
 
 
 
@@ -167,6 +168,7 @@ const SummaryBar = ({rows}: {rows:Transaction[]}) => {
 };
 
 const TransactionsPage = () => {
+  const navigate = useNavigate();
   const [addOpen, setAddOpen] = React.useState(false);
   const [range, setRange] = React.useState<{ from?: string; to?: string }>({});
   const [page, setPage] = useState(1);
@@ -218,9 +220,14 @@ const TransactionsPage = () => {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <AppStack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <AppTypography variant="h5">Transactions</AppTypography>
-        <AppButton variant="contained" startIcon={<AddIcon />} onClick={() => setAddOpen(true)}>
-          Add income / expense
-        </AppButton>
+        <AppStack direction="row" spacing={1}>
+          <AppButton variant="outlined" onClick={() => navigate("/summary")}>
+            Go to Summary
+          </AppButton>
+          <AppButton variant="contained" startIcon={<AddIcon />} onClick={() => setAddOpen(true)}>
+            Add income / expense
+          </AppButton>
+        </AppStack>
       </AppStack>
 
       <AppStack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ xs: "stretch", md: "center" }} sx={{ mb: 2 }}>

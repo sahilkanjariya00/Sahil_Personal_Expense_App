@@ -7,7 +7,7 @@ import { Dialog, DialogActions, DialogContent, DialogTitle, IconButton } from "@
 import CloseIcon from "@mui/icons-material/Close";
 import { createTransaction, type CreateTransactionIn } from "../../APIs/GetTransactions";
 import { fetchCategories, type CategoryPropsType } from "../../APIs/GetCategories";
-import { CATEGORY } from "../../Util/Endpoint";
+import { CATEGORIES } from "../../Util/Endpoint";
 import { createQueryUrl } from "../../Util/helper";
 
 type AddDialogProps = {
@@ -61,7 +61,7 @@ const AddTransactionDialog: React.FC<AddDialogProps> = ({ open, onClose, onChang
       include_global: true,
     }
 
-    const url = createQueryUrl(CATEGORY,params);
+    const url = createQueryUrl(CATEGORIES,params);
     fetchCategories(url).then((val)=>{
       const newCategories: Option[] = val.data.map((cat: any) => ({
         value: cat.id,
