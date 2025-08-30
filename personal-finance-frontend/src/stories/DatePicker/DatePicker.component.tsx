@@ -5,12 +5,14 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import type { PickerValue } from "@mui/x-date-pickers/internals";
 import type { DateValidationError, PickerChangeHandlerContext } from "@mui/x-date-pickers/models";
 import type { Dayjs } from "dayjs";
+import ClearIcon from "@mui/icons-material/Clear";
 
 export interface AppDatePickerProps {
   label: string;
   value: Dayjs | null;
   onChange: (value: PickerValue, context: PickerChangeHandlerContext<DateValidationError>) => void;
-  slotProps?: Object
+  slotProps?: Object;
+  allowClear?: boolean;
 }
 
 const AppDatePicker: React.FC<AppDatePickerProps> = ({ label, value, onChange, slotProps,...props }) => {

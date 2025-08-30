@@ -15,51 +15,26 @@ import {
   AppButton, 
   AppStack, 
   AppDatePicker,
+  CloseIcon,
 } from "../../stories";
 import dayjs, { Dayjs } from "dayjs";
 import AddIcon from "@mui/icons-material/Add";
-import { useQuery } from "@tanstack/react-query";
 import { AddTransactionDialog } from "../../components";
 import { fetchTransactions, type Transaction } from "../../APIs/GetTransactions";
-import { useTransactions } from "../../hooks/useTransactions";
+import { ROWSPERPAGEOPTOINS } from "../../Util/constants";
+import { TRANSACTIONS } from "../../Util/Endpoint";
+import { createQueryUrl } from "../../Util/helper";
 
 
 
 type Props = {
   rows: Transaction[];
-  total: number;               // total matching rows from API
-  page: number;                // 1-based page from API
-  rowsPerPage: number;         // limit
-  onPageChange: (page: number) => void;          // expects 1-based page
+  total: number;               
+  page: number;                
+  rowsPerPage: number;         
+  onPageChange: (page: number) => void;        
   onRowsPerPageChange: (rowsPerPage: number) => void;
 };
-
-const LS_KEY = "pfa-txns";
-
-function loadTxns(): Transaction[] {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-async function apiListTransactions(params: {
-  from?: string; // YYYY-MM-DD
-  to?: string;   // YYYY-MM-DD
-}): Promise<Transaction[]> {
-  // simulate server-side filtering
-  const all = loadTxns();
-  const { from, to } = params;
-  return all.filter((t) => {
-    const d = t.date;
-    if (from && d < from) return false;
-    if (to && d > to) return false;
-    return true;
-  });
-}
 
 const formatINR = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(n);
 
@@ -68,6 +43,14 @@ const DateRangeFilters: React.FC<{
   to?: string;
   onChange: (v: { from?: string; to?: string }) => void;
 }> = ({ from, to, onChange }) => {
+
+  const handleFromClear = ()=>{
+    onChange({from: undefined, to});
+  }
+
+  const handleToClear = ()=>{
+    onChange({from, to: undefined});
+  }
   return (
     <AppStack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
       <Box sx={{ minWidth: 240 }}>
@@ -75,6 +58,18 @@ const DateRangeFilters: React.FC<{
             label="From"
             value={from ? dayjs(from) : null}
             onChange={(v) => onChange({ from: v ? (v as Dayjs).format("YYYY-MM-DD") : undefined, to })}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                InputProps: from
+                  ? {
+                      endAdornment: (
+                        <CloseIcon onChange={handleFromClear}/>
+                      ),
+                    }
+                  : undefined,
+              },
+            }}
           />
       </Box>
       <Box sx={{ minWidth: 240 }}>
@@ -82,6 +77,18 @@ const DateRangeFilters: React.FC<{
             label="To"
             value={to ? dayjs(to) : null}
             onChange={(v) => onChange({ from, to: v ? (v as Dayjs).format("YYYY-MM-DD") : undefined })}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                InputProps: to
+                  ? {
+                      endAdornment: (
+                        <CloseIcon onChange={handleToClear}/>
+                      ),
+                    }
+                  : undefined,
+              },
+            }}
           />
       </Box>
     </AppStack>
@@ -140,7 +147,7 @@ const TransactionsTable = ({
         rowsPerPage={rowsPerPage}
         onPageChange={(_e, newMuiPage) => onPageChange(newMuiPage + 1)} 
         onRowsPerPageChange={(e) => onRowsPerPageChange(parseInt(e.target.value, 10))}
-        rowsPerPageOptions={[10, 20, 50, 100]}
+        rowsPerPageOptions={ROWSPERPAGEOPTOINS}
       />
     </Paper>
   );
@@ -163,35 +170,49 @@ const TransactionsPage = () => {
   const [addOpen, setAddOpen] = React.useState(false);
   const [range, setRange] = React.useState<{ from?: string; to?: string }>({});
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(5);
+  const [limit, setLimit] = useState(ROWSPERPAGEOPTOINS[0]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [change, setChange] = useState<boolean>(true);
 
-  // const { data: rows = [], isLoading } = useTransactions(range.from, range.to);
-  const { data, isLoading } = useTransactions({
-    user_id: 1,
-    from: range.from,
-    to: range.to,
-    page,
-    limit,
-  });
+  useEffect(()=>{
+    setIsLoading(true);
+    callTransactions();
+  },[page,limit,range, change])
 
-  console.log(data);
+  const callTransactions = () => {
+    const params:any = {
+      user_id: 1,
+      page,
+      limit,
+    }
+    if(range.from){
+      params.from = range.from
+    }
+    if(range.to){
+      params.to = range.to;
+    }
 
-  // useEffect(()=>{
-  //   getTransactionData();
-  // },[]);
+    const url = createQueryUrl(TRANSACTIONS,params);
 
-  // const getTransactionData = ()=>{
-  //   const data = {
-  //       user_id: 1,
-  //       page: 1,                // 1-based
-  //       limit: 5
-  //   }
-  //   fetchTransactions(data).then((resp)=>{
-  //     console.log(resp);
-  //   }).catch(()=>{
+    fetchTransactions(url).then((val)=>{
+      setIsLoading(false);
+      setTransactions(val.data.items);
+      setTotalRecords(val.data.total);
+    }).catch(()=>{
+      setIsLoading(false);
+    });
+  }
 
-  //   });
-  // }
+  const handlePageChange = (page:number) =>{
+    setPage(page);
+  }
+
+  const handleLimitChange = (limit:number) =>{
+    setLimit(limit);
+  }
+
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -205,22 +226,25 @@ const TransactionsPage = () => {
       <AppStack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ xs: "stretch", md: "center" }} sx={{ mb: 2 }}>
         <DateRangeFilters from={range.from} to={range.to} onChange={setRange} />
         <Box sx={{ flexGrow: 1 }} />
-        <SummaryBar rows={data?.items||[]} />
+        <SummaryBar rows={transactions} />
       </AppStack>
 
       {isLoading ? (
         <AppTypography variant="body1">Loading…</AppTypography>
       ) : (
-        <TransactionsTable rows={data?.items||[]} total={0} page={0} rowsPerPage={0} onPageChange={function (page: number): void {
-            throw new Error("Function not implemented.");
-          } } onRowsPerPageChange={function (rowsPerPage: number): void {
-            throw new Error("Function not implemented.");
-          } } />
+        <TransactionsTable 
+          rows={transactions} 
+          total={totalRecords} 
+          page={page} 
+          rowsPerPage={limit} 
+          onPageChange={handlePageChange} 
+          onRowsPerPageChange={handleLimitChange} />
       )}
 
-      <AddTransactionDialog open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddTransactionDialog open={addOpen} onClose={() => setAddOpen(false)} onChange={setChange}/>
     </Container>
   );
 };
 
 export default TransactionsPage;
+

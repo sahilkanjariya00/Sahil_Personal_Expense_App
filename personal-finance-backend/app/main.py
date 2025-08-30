@@ -4,6 +4,7 @@ from sqlmodel import Session
 from .db import create_db_and_tables, engine
 from .seed import seed_categories
 from .routers.transactions import router as transactions_router
+from .routers.categories import router as categories_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -28,6 +29,8 @@ def on_startup():
         seed_categories(session)
 
 app.include_router(transactions_router)
+
+app.include_router(categories_router)
 
 @app.get("/")
 def health():

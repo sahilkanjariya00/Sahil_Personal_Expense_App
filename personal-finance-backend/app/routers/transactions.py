@@ -14,13 +14,13 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 
 class TransactionCreateIn(SQLModel):
-    user_id: int                       # pass your default user id for now
-    type: TxnType                      # "expense" | "income"
-    date: date                         # "YYYY-MM-DD"
-    category_id: int                   # REQUIRED now
+    user_id: int
+    type: TxnType                 # "expense" | "income"
+    date: date                    # "YYYY-MM-DD"
+    category_id: Optional[int] = None   # required only for expense; ignored for income
     description: Optional[str] = None
-    amount: Optional[str] = None       # rupees as string (e.g., "250.00")
-    amount_minor: Optional[int] = None # paise (e.g., 25000)
+    amount: Optional[str] = None        # rupees string, e.g. "250.00"
+    amount_minor: Optional[int] = None  # paise, e.g. 25000
 
 class TransactionRowOut(SQLModel):
     id: int
@@ -41,7 +41,7 @@ def _minor_to_rupees_str(minor: int) -> str:
 
 @router.post("", response_model=TransactionRead, status_code=201)
 def create_transaction(payload: TransactionCreateIn, session: Session = Depends(get_session)):
-    # amount validation
+    # --- amount validation ---
     if payload.amount_minor is None and payload.amount is None:
         raise HTTPException(status_code=400, detail="Provide either 'amount' (rupees) or 'amount_minor' (paise).")
     if payload.amount_minor is not None and payload.amount is not None:
@@ -54,21 +54,29 @@ def create_transaction(payload: TransactionCreateIn, session: Session = Depends(
     if amount_minor is None or amount_minor <= 0:
         raise HTTPException(status_code=400, detail="'amount' must be > 0.")
 
-    # category must exist and be accessible (global or same user)
-    cat = session.exec(
-        select(Category).where(
-            Category.id == payload.category_id,
-            (Category.user_id == payload.user_id) | (Category.user_id.is_(None)),
-        )
-    ).first()
-    if not cat:
-        raise HTTPException(status_code=404, detail="Category not found for this user.")
+    # --- category handling ---
+    if payload.type == "expense":
+        # Expense MUST have a valid category accessible to user (or global)
+        if payload.category_id is None:
+            raise HTTPException(status_code=400, detail="category_id is required for expense.")
+        cat = session.exec(
+            select(Category).where(
+                Category.id == payload.category_id,
+                (Category.user_id == payload.user_id) | (Category.user_id.is_(None)),
+            )
+        ).first()
+        if not cat:
+            raise HTTPException(status_code=404, detail="Category not found for this user.")
+        category_id = payload.category_id
+    else:
+        # Income: ignore any provided category (store NULL)
+        category_id = None
 
     tx = Transaction(
         user_id=payload.user_id,
         type=payload.type,
         date=payload.date,
-        category_id=payload.category_id,
+        category_id=category_id,
         description=(payload.description or "").strip() or None,
         amount_minor=amount_minor,
         created_at=datetime.utcnow(),
