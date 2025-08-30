@@ -60,7 +60,8 @@ CREATE INDEX idx_tx_user_date         ON transactions(user_id, date);
 CREATE INDEX idx_tx_user_type_date    ON transactions(user_id, type, date);
 CREATE INDEX idx_tx_user_cat_date     ON transactions(user_id, category_id, date);
 
-
+# conda create -n pfa-backend python=3.11 -y
+conda create -n pfa-backend python=3.11 -y
 # rm -f pfa.sqlite3  
 # uvicorn app.main:app --reload
 
