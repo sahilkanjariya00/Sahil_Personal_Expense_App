@@ -17,13 +17,15 @@ import {
   AppButton,
   AppDatePicker,
   AppSelect,
+  AppStack,
   AppTypography,
 } from "../../stories";
 import dayjs, { Dayjs } from "dayjs";
 import { createQueryUrl } from "../../Util/helper";
-import { CATEGORY, MONTHLY, SUMMARY } from "../../Util/Endpoint";
+import { CATEGORY, MONTHLY, SUMMARY} from "../../Util/Endpoint";
 import { fetchCategoryChartData, fetchMonthlyChartData, type CategoryChartPropType, type CategoryMonthlyPropType } from "../../APIs/GetChartData";
-import { PALETTE } from "../../Util/constants";
+import { PALETTE, ROUTES } from "../../Util/constants";
+import { useNavigate } from "react-router-dom";
 ChartJS.register(
   ArcElement,
   Tooltip,
@@ -41,6 +43,7 @@ const formatINR = (n: number) =>
 
 function Summary() {
   // Filters for category-by-range
+  const navigate = useNavigate();
   const today = new Date();
   const past30 = new Date();
   past30.setDate(today.getDate() - 30);   
@@ -153,16 +156,23 @@ function Summary() {
     (y) => ({ label: String(y), value: y })
   );
 
+  const handleBackClick = () => {
+    navigate(ROUTES.default);
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <MuiStack
+      {/* <MuiStack
         direction="row"
         justifyContent="space-between"
         alignItems="center"
         sx={{ mb: 3 }}
-      >
-        <AppTypography variant="h5">Summary</AppTypography>
-      </MuiStack>
+      > */}
+        <AppStack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+          <AppTypography variant="h5">Summary</AppTypography>
+          <AppButton variant="outlined" onClick={handleBackClick}>Back to Transactions</AppButton>
+        </AppStack>
+      {/* </MuiStack> */}
       <Grid container spacing={3}>
         {/* Category by Date Range */}
         <Grid item xs={12} md={6}>
