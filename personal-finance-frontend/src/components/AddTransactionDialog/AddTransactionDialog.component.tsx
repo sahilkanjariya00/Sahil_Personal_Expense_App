@@ -22,7 +22,7 @@ type TxnType = "income" | "expense";
 
 const AddTransactionDialog: React.FC<AddDialogProps> = ({ open, onClose, onChange }) => {
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<Option[]>([])
+  const [categories, setCategories] = useState<Option[]>([]);
 
   useEffect(()=>{
     callCategories();
@@ -63,11 +63,12 @@ const AddTransactionDialog: React.FC<AddDialogProps> = ({ open, onClose, onChang
 
     const url = createQueryUrl(CATEGORY,params);
     fetchCategories(url).then((val)=>{
-        val.data.forEach((cat)=>{
-          setCategories((prev)=>{
-            return [{value: cat.id, label: cat.name}, ...prev]
-          })
-        })
+      const newCategories: Option[] = val.data.map((cat: any) => ({
+        value: cat.id,
+        label: cat.name,
+      }));
+      
+      setCategories(newCategories);
     }).catch(()=>{
 
     });
