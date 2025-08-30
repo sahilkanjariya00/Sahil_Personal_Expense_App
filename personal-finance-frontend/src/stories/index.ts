@@ -5,6 +5,7 @@ import AppSelect from "./Select";
 import AppDatePicker from "./DatePicker";
 import AppTextField from "./TextField";
 import CloseIcon from "./CloseIcon";
+import FileUpload from "./FileUpload";
 
 export{
     AppTypography,
@@ -13,5 +14,6 @@ export{
     AppSelect,
     AppDatePicker,
     AppTextField,
-    CloseIcon
+    CloseIcon,
+    FileUpload
 }
