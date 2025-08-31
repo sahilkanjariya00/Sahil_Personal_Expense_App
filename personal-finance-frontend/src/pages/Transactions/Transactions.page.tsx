@@ -21,7 +21,7 @@ import dayjs, { Dayjs } from "dayjs";
 import AddIcon from "@mui/icons-material/Add";
 import { AddTransactionDialog } from "../../components";
 import { fetchTransactions, type Transaction } from "../../APIs/GetTransactions";
-import { ROWSPERPAGEOPTOINS } from "../../Util/constants";
+import { ROUTES, ROWSPERPAGEOPTOINS } from "../../Util/constants";
 import { TRANSACTIONS } from "../../Util/Endpoint";
 import { createQueryUrl } from "../../Util/helper";
 import { useNavigate } from "react-router-dom";
@@ -221,6 +221,12 @@ const TransactionsPage = () => {
       <AppStack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <AppTypography variant="h5">Transactions</AppTypography>
         <AppStack direction="row" spacing={1}>
+          <AppButton
+            variant="outlined"
+            onClick={() => navigate(ROUTES.addReceiptData)}
+          >
+            Import from Receipt
+          </AppButton>
           <AppButton variant="outlined" onClick={() => navigate("/summary")}>
             Go to Summary
           </AppButton>

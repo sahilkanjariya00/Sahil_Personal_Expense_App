@@ -1,7 +1,7 @@
 export const ROUTES = {
     default:'/',
     summary:'/summary',
-    addReceiptData: 'addReceiptData'
+    addReceiptData: 'add-receipt-data'
 }
 
 export const ROWSPERPAGEOPTOINS = [5, 10, 20, 50, 100]

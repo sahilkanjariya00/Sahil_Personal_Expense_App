@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Container, Paper, Typography, Stack, IconButton, Divider, Button } from "@mui/material";
+import { Box, Container, Paper, Typography, Stack, IconButton, Divider, Button, Chip } from "@mui/material";
 import Grid from '@mui/material/GridLegacy';
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
@@ -14,10 +14,12 @@ import { createQueryUrl } from '../../Util/helper';
 import { CATEGORIES } from '../../Util/Endpoint';
 import { getReceiptTransaction } from '../../APIs/GetReceiptData';
 import dayjs, { Dayjs } from 'dayjs';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../Util/constants';
+import { createBulkTransaction, type CreateTransactionIn } from '../../APIs/GetTransactions';
 
 // helpers
 const REQUIRED = "Required";
-const isPositive = (v: any) => (v != null && Number(v) > 0 ? undefined : "Must be > 0");
 const toRupeesString = (n: number | string) => Number(n).toFixed(2);
 
 type RowForm = {
@@ -39,6 +41,8 @@ function AddReceiptData() {
   const [error, setError] = React.useState<string | null>(null);
   const [categories, setCategories] = useState<Option[]>([]);
   const [catsLoading, setCatsLoading] = useState(true);
+  const [pendingRows, setPendingRows] = React.useState<RowForm[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     callCategories();
@@ -64,7 +68,16 @@ function AddReceiptData() {
     });
   }
 
-  const onFileSelected = async (file: File | null, pushRow: (v: RowForm) => void, resetRows: (rows: RowForm[]) => void) => {
+  const uploadBulkTransactions = (payload:CreateTransactionIn[]) => {
+    createBulkTransaction(payload).then(()=>{
+      // setPendingRows([]);
+      navigate(ROUTES.default);
+    }).catch(()=>{
+
+    });
+  }
+
+  const onFileSelected = (file: File | null) => {
     if (!file) return;
     setError(null);
     setLoadingExtract(true);
@@ -72,88 +85,9 @@ function AddReceiptData() {
     const payload = new FormData();
     payload.append("file", file);
 
-    // getReceiptTransaction(payload)
-    //   .then((val) => {
-        // const drafts = val.data.transactions ?? [];
-        const drafts = [
-          {
-            "type": "expense",
-            "date": "2023-10-02",
-            "description": "Foretakeresisteret",
-            "amount": 60,
-            "confidence": {
-              "amount": 0.9,
-              "description": 0.8,
-              "date": 0.7
-            }
-          },
-          {
-            "type": "expense",
-            "date": "2023-10-02",
-            "description": "TRANKE APRIKOSER",
-            "amount": 10.9,
-            "confidence": {
-              "amount": 0.9,
-              "description": 0.8,
-              "date": 0.7
-            }
-          },
-          {
-            "type": "expense",
-            "date": "2023-10-02",
-            "description": "COUSOUS",
-            "amount": 3206,
-            "confidence": {
-              "amount": 0.9,
-              "description": 0.8,
-              "date": 0.7
-            }
-          },
-          {
-            "type": "expense",
-            "date": "2023-10-02",
-            "description": "SREAL ISOG",
-            "amount": 33.3,
-            "confidence": {
-              "amount": 0.9,
-              "description": 0.8,
-              "date": 0.7
-            }
-          },
-          {
-            "type": "expense",
-            "date": "2023-10-02",
-            "description": "VAREUK JUP",
-            "amount": 2023,
-            "confidence": {
-              "amount": 0.9,
-              "description": 0.8,
-              "date": 0.7
-            }
-          },
-          {
-            "type": "expense",
-            "date": "2023-10-02",
-            "description": "KONTAKTLASS",
-            "amount": 4,
-            "confidence": {
-              "amount": 0.9,
-              "description": 0.8,
-              "date": 0.7
-            }
-          },
-          {
-            "type": "expense",
-            "date": "2023-10-02",
-            "description": "ARD:00059",
-            "amount": 57800002110,
-            "confidence": {
-              "amount": 0.9,
-              "description": 0.8,
-              "date": 0.7
-            }
-          }
-        ]
+    getReceiptTransaction(payload)
+      .then((val) => {
+        const drafts = val.data.transactions ?? [];
 
         if (!drafts.length) {
           setError("No items detected in receipt. You can still add rows manually.");
@@ -169,16 +103,14 @@ function AddReceiptData() {
           description: d.description ?? "",
           amount: d.amount != null ? String(d.amount) : "",
         }));
-        console.log(rows);
-        resetRows(rows);
+        setPendingRows(rows);
         setLoadingExtract(false);
-      // }).catch(()=>{
-      //   setLoadingExtract(false);
-      // })
+      }).catch(()=>{
+        setLoadingExtract(false);
+      })
   };
 
   const validateForm = (values: FormValues) => {
-    console.log(values);
     const errors: any = {};
     if (!values.rows || values.rows.length === 0) {
       errors.rows = { _error: "Add at least one row" };
@@ -188,31 +120,28 @@ function AddReceiptData() {
       const re: any = {};
       if (!r.type) re.type = REQUIRED;
       if (!r.date) re.date = REQUIRED;
-      if (!r.category_id && r.type == "expense") re.category_id = REQUIRED;
-      // if (!r.description || !String(r.description).trim()) re.description = REQUIRED;
-      if (!r.amount || r.amount == "") re.amount = "Required";
-      else if (Number(r.amount) <= 0) re.amount = "Must be > 0";
+      if (!r.category_id) re.category_id = REQUIRED;
+      if (!r.amount || r.amount === "") re.amount = REQUIRED;
+      else if (r.amount!="" && Number(r.amount) <= 0) re.amount = "Must be > 0";
       return re;
     });
     errors.rows = rowsErrors;
-    console.log(errors);
     return errors;
   };
 
   const onSubmit = async (values: FormValues) => {
     // map to bulk payload
-    const payload = values.rows.map((r) => ({
+    const payload:CreateTransactionIn[] = values.rows.map((r) => ({
       user_id: userId,
       type: r.type,
       date: r.date!, // validated
-      category_id: r.type === "income" ? null : (r.category_id as number),
-      description: (r.description || "").trim() || null,
+      category_id: (r.category_id as number),
+      description: (r.description || "").trim(),
       amount: toRupeesString(r.amount as any),
     }));
-    // await createTransactionsBulk(payload); // assumes backend endpoint exists
+
+    uploadBulkTransactions(payload);
     console.log(payload);
-    // you can navigate back or show a success message
-    alert("Transactions saved!");
   };
 
   return (
@@ -231,21 +160,66 @@ function AddReceiptData() {
             const push = (row: RowForm) => form.mutators.push("rows", row);
             const resetRows = (rows: RowForm[]) => form.change("rows", rows);
 
+            const applyPending = () => {
+              form.change("rows", pendingRows);
+              // optional: keep pendingRows so the user can re-apply; or clear:
+              // setPendingRows([]);
+            };
+
+            // const resetForm = () => {
+            //   form.change("rows", []);
+            //   setPendingRows([]);
+            //   setError(null);
+            // };
+
             return (
               <form onSubmit={handleSubmit} noValidate>
                 <Stack spacing={2}>
                   {/* Upload */}
-                  <Box>
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={2}
+                    alignItems="center"
+                  >
                     <FileUpload
                       label={loadingExtract ? "Reading..." : "Upload Receipt"}
-                      onFileSelected={(f) => onFileSelected(f, push, resetRows)}
+                      onFileSelected={onFileSelected}
                     />
-                    {error && (
-                      <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-                        {error}
-                      </Typography>
+                    <AppButton
+                      variant="contained"
+                      disabled={pendingRows.length === 0}
+                      onClick={applyPending}
+                    >
+                      Show transactions
+                    </AppButton>
+                    {/* <AppButton
+                      variant="outlined"
+                      color="warning"
+                      onClick={resetForm}
+                    >
+                      Reset Form
+                    </AppButton> */}
+                    <AppButton
+                      variant="outlined"
+                      color="secondary"
+                      onClick={() => navigate(ROUTES.default)}
+                    >
+                      Back
+                    </AppButton>
+                    {pendingRows.length > 0 && (
+                      <Chip
+                        size="small"
+                        color="primary"
+                        label={`${pendingRows.length} items detected`}
+                      />
                     )}
-                  </Box>
+                  </Stack>
+                  {error && (
+                    <Typography variant="body2" color="error">
+                      {error}
+                    </Typography>
+                  )}
+
 
                   <Divider />
 
@@ -267,10 +241,13 @@ function AddReceiptData() {
                                 <Field name={`${name}.type`}>
                                   {({ input, meta }) => (
                                     <AppSelect
-                                      label="Type"
-                                      value={input.value || "expense"}
+                                      {...input}
                                       options={["expense", "income"]}
-                                      onChange={(e: any) => input.onChange(e.target.value)}
+                                      label={"Type"}
+                                      value={input.value ?? ""}
+                                      onChange={(e) => input.onChange(e.target.value)}
+                                      required
+                                      disabled
                                       error={meta.touched && meta.error ? true : false}
                                     />
                                   )}
@@ -334,7 +311,7 @@ function AddReceiptData() {
 
                               {/* Amount */}
                               <Grid item xs={12} md={2}>
-                                <Field name={`${name}.amount`} validate={isPositive}>
+                                <Field name={`${name}.amount`}>
                                   {({ input, meta }) => (
                                     <AppTextField
                                       {...input}
