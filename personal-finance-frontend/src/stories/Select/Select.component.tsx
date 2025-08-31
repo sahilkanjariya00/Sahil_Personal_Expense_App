@@ -1,4 +1,3 @@
-import React from "react";
 import { FormControl, InputLabel, MenuItem, Select as MuiSelect, type SelectProps } from "@mui/material";
 
 export type Option = string | { label: string; value: any };
@@ -8,7 +7,7 @@ export type AppSelectProps = Omit<SelectProps, "label"> & {
   options: Option[];
 };
 
-const AppSelect: React.FC<AppSelectProps> = ({ label, options, ...props }) => {
+const AppSelect = ({ label, options, ...props }: AppSelectProps) => {
   return (
     <FormControl fullWidth>
       <InputLabel>{label}</InputLabel>

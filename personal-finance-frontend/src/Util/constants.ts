@@ -20,3 +20,31 @@ export const PALETTE = [
   "#10B981", // emerald
   "#EAB308", // yellow
 ];
+
+export const DATE_FORMATE = "YYYY-MM-DD";
+
+export const TABLE_HEADING = {
+  DATE: "Date",
+  TYPE: "Type",
+  CATEGORY: "Category",
+  DESCRIPTION: "Description",
+  AMOUNT: "Amount (INR)"
+}
+
+export const EXPENSE_TYPE = ["expense", "income"];
+
+export const BUTTON = {
+  SAVE: "Save",
+  CANCEL: "Cancel",
+  SAVING: "Saving...",
+  IMPORT_FROM_RECEIPT: "Import from Receipt",
+  GO_TO_SUMMARY: "Go to Summary",
+  ADD_INCOME_EXPENSE: "Add income / expense",
+  BACK_TO_TRANSACTIONS: "Back to Transactions",
+  RESET: "Reset",
+  SHOW_TRANSACTIONS: "Show transactions",
+  BACK: "Back",
+  ADD_MORE_RECORD: "Add more record"
+}
+
+export const REQUIRED = "Required";

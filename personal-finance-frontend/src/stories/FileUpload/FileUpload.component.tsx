@@ -1,13 +1,14 @@
 import React from "react";
-import { Box, Button } from "@mui/material";
 import AppTypography from "../Typography";
+import AppBox from "../AppBox";
+import AppButton from "../Button";
 
-interface FileUploadProps {
+type FileUploadPropsType = {
   label?: string;
   onFileSelected: (file: File | null) => void;
 }
 
-const FileUpload = ({ label = "Upload File", onFileSelected }:FileUploadProps) => {
+const FileUpload = ({ label = "Upload File", onFileSelected }:FileUploadPropsType) => {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
 
   const handleClick = () => {
@@ -20,7 +21,7 @@ const FileUpload = ({ label = "Upload File", onFileSelected }:FileUploadProps) =
   };
 
   return (
-    <Box>
+    <AppBox>
       <input
         type="file"
         hidden
@@ -28,13 +29,13 @@ const FileUpload = ({ label = "Upload File", onFileSelected }:FileUploadProps) =
         accept="image/*,.pdf"
         onChange={handleChange}
       />
-      <Button variant="outlined" onClick={handleClick}>
+      <AppButton variant="outlined" onClick={handleClick}>
         {label}
-      </Button>
+      </AppButton>
       <AppTypography variant="caption" display="block" sx={{ mt: 1 }}>
         Supports Images (jpg, png) or PDF
       </AppTypography>
-    </Box>
+    </AppBox>
   );
 };
 

@@ -19,3 +19,6 @@ const keys = Object.keys(params);
 
   return `${url}${separator}${queryString}`;
 }
+
+export const formatINR = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(n);
+

@@ -1,9 +1,7 @@
-import React from "react";
 import { Button as MuiButton, type ButtonProps } from "@mui/material";
 
-export type AppButtonProps = ButtonProps;
 
-const AppButton: React.FC<AppButtonProps> = (props) => {
+const AppButton = (props: ButtonProps) => {
   return <MuiButton {...props} />;
 };
 

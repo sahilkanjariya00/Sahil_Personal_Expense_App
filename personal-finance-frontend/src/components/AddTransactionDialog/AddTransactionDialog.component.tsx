@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { AppButton, AppDatePicker, AppSelect, AppTextField } from "../../stories";
-import dayjs, { Dayjs } from "dayjs";
 import { Field, Form } from "react-final-form";
 import FormControl from "@mui/material/FormControl";
-import { Dialog, DialogActions, DialogContent, DialogTitle, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import { Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
+import dayjs, { Dayjs } from "dayjs";
+import { AppButton, AppDatePicker, AppIconButton, AppSelect, AppTextField } from "../../stories";
 import { createTransaction, type CreateTransactionIn } from "../../APIs/GetTransactions";
 import { fetchCategories, type CategoryPropsType } from "../../APIs/GetCategories";
 import { CATEGORIES } from "../../Util/Endpoint";
 import { createQueryUrl } from "../../Util/helper";
+import { BUTTON, DATE_FORMATE, EXPENSE_TYPE, REQUIRED } from "../../Util/constants";
 
 type AddDialogProps = {
   open: boolean;
@@ -20,66 +21,65 @@ type Option = string | { label: string; value: any };
 
 type TxnType = "income" | "expense";
 
-const AddTransactionDialog: React.FC<AddDialogProps> = ({ open, onClose, onChange }) => {
+const AddTransactionDialog = ({ open, onClose, onChange }: AddDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Option[]>([]);
 
-  useEffect(()=>{
+  useEffect(() => {
     callCategories();
-  },[])
+  }, [])
 
-  const onSubmit = async (values: any) => {
-    setLoading(true);
-    const payload:CreateTransactionIn = {
-      type: values.type as TxnType,
-      date: values.date as string,
-      description: values.description?.trim() || "",
-      amount_minor: Number(values.amount*100),
-      user_id: 1,
-    }
-
-    if(values.type == "expense" && values.category>=0){
-      payload.category_id = values.category;
-    }
-
-    // console.log(payload, values);
-    callCreateTransaction(payload);
-  };
-
-  const callCreateTransaction = (payload: CreateTransactionIn) => {
-    createTransaction(payload).then(()=>{
-      setLoading(false);
-      onChange(prev=>!prev);
-      onClose();
-    }).catch(()=>{
-      setLoading(false);
-    });
-  } 
-
-  const callCategories =  ()=>{
-    const params:CategoryPropsType = {
+  const callCategories = () => {
+    const params: CategoryPropsType = {
       include_global: true,
     }
 
-    const url = createQueryUrl(CATEGORIES,params);
-    fetchCategories(url).then((val)=>{
+    const url = createQueryUrl(CATEGORIES, params);
+    fetchCategories(url).then((val) => {
       const newCategories: Option[] = val.data.map((cat: any) => ({
         value: cat.id,
         label: cat.name,
       }));
-      
+
       setCategories(newCategories);
-    }).catch(()=>{
+    }).catch(() => {
 
     });
   }
 
+  const callCreateTransaction = (payload: CreateTransactionIn) => {
+    createTransaction(payload).then(() => {
+      setLoading(false);
+      onChange(prev => !prev);
+      onClose();
+    }).catch(() => {
+      setLoading(false);
+    });
+  }
+
+  const onSubmit = async (values: any) => {
+    setLoading(true);
+    const payload: CreateTransactionIn = {
+      type: values.type as TxnType,
+      date: values.date as string,
+      description: values.description?.trim() || "",
+      amount_minor: Number(values.amount * 100),
+      user_id: 1,
+    }
+
+    if (values.type == "expense" && values.category >= 0) {
+      payload.category_id = values.category;
+    }
+
+    callCreateTransaction(payload);
+  };
+
   const validate = (values: any) => {
     const errors: Record<string, string> = {};
-    if (!values.type) errors.type = "Required";
-    if (!values.date) errors.date = "Required";
-    if (!values.category && values.type == "expense") errors.category = "Required";
-    if (!values.amount) errors.amount = "Required";
+    if (!values.type) errors.type = REQUIRED;
+    if (!values.date) errors.date = REQUIRED;
+    if (!values.category && values.type == "expense") errors.category = REQUIRED;
+    if (!values.amount) errors.amount = REQUIRED;
     else if (Number(values.amount) <= 0) errors.amount = "Must be > 0";
     return errors;
   };
@@ -88,102 +88,102 @@ const AddTransactionDialog: React.FC<AddDialogProps> = ({ open, onClose, onChang
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
         Add Transaction
-        <IconButton onClick={onClose} sx={{ position: "absolute", right: 8, top: 8 }} aria-label="close">
+        <AppIconButton onClick={onClose} sx={{ position: "absolute", right: 8, top: 8 }} aria-label="close">
           <CloseIcon />
-        </IconButton>
+        </AppIconButton>
       </DialogTitle>
       <Form
         onSubmit={onSubmit}
-        initialValues={{ type: "expense", date: dayjs().format("YYYY-MM-DD") }}
+        initialValues={{ type: "expense", date: dayjs().format(DATE_FORMATE) }}
         validate={validate}
-        render={({ handleSubmit, submitting, pristine, values }) => (
+        render={({ handleSubmit, submitting, values }) => (
           <form onSubmit={handleSubmit} noValidate>
             <DialogContent>
               {/* Type toggle as Select for simplicity */}
               <Field name={"type"}>
-                  {({ input, meta }) => (
-                    <FormControl fullWidth margin="normal">
-                      <AppSelect
-                        {...input}
-                        options={["expense", "income"]}
-                        label={"Type"}
-                        value={input.value ?? ""}
-                        onChange={(e) => input.onChange(e.target.value)}
-                        required
-                        error={meta.touched && meta.error ? true : false}
-                      />
-                    </FormControl>
-                  )}
-                </Field>
+                {({ input, meta }) => (
+                  <FormControl fullWidth margin="normal">
+                    <AppSelect
+                      {...input}
+                      required
+                      label={"Type"}
+                      options={EXPENSE_TYPE}
+                      value={input.value ?? ""}
+                      onChange={(e) => input.onChange(e.target.value)}
+                      error={meta.touched && meta.error ? true : false}
+                    />
+                  </FormControl>
+                )}
+              </Field>
 
               <Field name={"date"}>
-                    {({ input, meta }) => (
-                        <AppDatePicker
-                            label={"Date"}
-                            value={input.value ? dayjs(input.value) : null}
-                            onChange={(v) => input.onChange(v ? (v as Dayjs).format("YYYY-MM-DD") : "")}
-                            slotProps={{
-                                textField: {
-                                fullWidth: true,
-                                margin: "normal",
-                                // required,
-                                error: meta.touched && !!meta.error,
-                                helperText: meta.touched && meta.error ? meta.error : "",
-                                },
-                            }}
-                        />
-                    )}
-                </Field>
+                {({ input, meta }) => (
+                  <AppDatePicker
+                    label={"Date"}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        margin: "normal",
+                        // required,
+                        error: meta.touched && !!meta.error,
+                        helperText: meta.touched && meta.error ? meta.error : "",
+                      },
+                    }}
+                    value={input.value ? dayjs(input.value) : null}
+                    onChange={(v) => input.onChange(v ? (v as Dayjs).format(DATE_FORMATE) : "")}
+                  />
+                )}
+              </Field>
 
-              {values.type == "expense"?<Field name={"category"}>
-                    {({ input, meta }) => (
-                    <FormControl fullWidth margin="normal">
-                        <AppSelect
-                        {...input}
-                        options={categories}
-                        label={"Category"}
-                        value={input.value ?? ""}
-                        onChange={(e) => input.onChange(e.target.value)}
-                        required
-                        error={meta.touched && meta.error ? true : false}
-                        />
-                    </FormControl>
-                    )}
-                </Field>:<></>}
+              {values.type == EXPENSE_TYPE[0] ? <Field name={"category"}>
+                {({ input, meta }) => (
+                  <FormControl fullWidth margin="normal">
+                    <AppSelect
+                      {...input}
+                      required
+                      label={"Category"}
+                      options={categories}
+                      value={input.value ?? ""}
+                      onChange={(e) => input.onChange(e.target.value)}
+                      error={meta.touched && meta.error ? true : false}
+                    />
+                  </FormControl>
+                )}
+              </Field> : <></>}
 
               <Field name={"description"}>
-                    {({ input, meta }) => (
-                    <AppTextField
-                        {...input}
-                        label={"Description"}
-                        fullWidth
-                        margin="normal"
-                        multiline
-                        error={meta.touched && meta.error ? true : false}
-                        helperText={meta.touched && meta.error ? meta.error : ""}
-                    />
-                    )}
-                </Field>
+                {({ input, meta }) => (
+                  <AppTextField
+                    {...input}
+                    multiline
+                    fullWidth
+                    margin="normal"
+                    label={"Description"}
+                    error={meta.touched && meta.error ? true : false}
+                    helperText={meta.touched && meta.error ? meta.error : ""}
+                  />
+                )}
+              </Field>
 
               <Field name={"amount"}>
                 {({ input, meta }) => (
-                <AppTextField
+                  <AppTextField
                     {...input}
-                    label={"Amount (INR)"}
-                    type={"number"}
                     required
                     fullWidth
+                    type={"number"}
                     margin="normal"
+                    label={"Amount (INR)"}
                     error={meta.touched && meta.error ? true : false}
                     helperText={meta.touched && meta.error ? meta.error : ""}
-                />
+                  />
                 )}
-            </Field>
+              </Field>
             </DialogContent>
             <DialogActions>
-              <AppButton onClick={onClose} color="inherit">Cancel</AppButton>
+              <AppButton onClick={onClose} color="inherit">{BUTTON.CANCEL}</AppButton>
               <AppButton type="submit" variant="contained" disabled={submitting || loading}>
-                {loading ? "Saving..." : "Save"}
+                {loading ? BUTTON.SAVING : BUTTON.SAVE}
               </AppButton>
             </DialogActions>
           </form>

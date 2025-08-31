@@ -1,9 +1,6 @@
-import React from "react";
 import { Stack as MuiStack, type StackProps } from "@mui/material";
 
-export type AppStackProps = StackProps;
-
-const AppStack: React.FC<AppStackProps> = (props) => {
+const AppStack = (props: StackProps) => {
   return <MuiStack {...props} />;
 };
 
