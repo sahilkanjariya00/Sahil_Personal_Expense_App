@@ -11,8 +11,9 @@ import {
   AppContainer,
   AppBox,
 } from "../../stories";
-import { AddTransactionDialog, TransactionsTable } from "../../components";
-import { fetchTransactions, type Transaction } from "../../APIs/GetTransactions";
+import useToast from "../../hooks/toast";
+import { AddTransactionDialog, DeleteConfDialog, TransactionsTable } from "../../components";
+import { deleteTransaction, fetchTransactions, type Transaction } from "../../APIs/GetTransactions";
 import { BUTTON, DATE_FORMATE, ROUTES, ROWSPERPAGEOPTOINS } from "../../Util/constants";
 import { TRANSACTIONS } from "../../Util/Endpoint";
 import { createQueryUrl, formatINR } from "../../Util/helper";
@@ -78,7 +79,7 @@ const DateRangeFilters = ({ from, to, onChange }: DateRangeFiltersType) => {
 
 const TransactionsPage = () => {
   const navigate = useNavigate();
-
+  const { success, error: errort } = useToast();
   const [addOpen, setAddOpen] = React.useState(false);
   const [range, setRange] = React.useState<{ from?: string; to?: string }>({});
   const [page, setPage] = useState(1);
@@ -87,6 +88,8 @@ const TransactionsPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [change, setChange] = useState<boolean>(true);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [selected, setSelected] = useState<Transaction>();
 
   useEffect(() => {
     setIsLoading(true);
@@ -117,6 +120,19 @@ const TransactionsPage = () => {
     });
   }
 
+  const handleConfirmDelete = () => {
+    if(selected){
+      deleteTransaction(selected.id).then(()=>{
+        setConfirmOpen(false);
+        setChange(prev => !prev);
+        setSelected(undefined);
+        success("Transaction deleted!");
+      }).catch((err)=>{
+        errort(err.message||"");
+      });
+    }
+  }
+
   const SummaryBar = ({ rows }: { rows: Transaction[] }) => {
     const income = rows.filter(r => r.type === "income").reduce((s, r) => s + r.amount, 0);
     const expense = rows.filter(r => r.type === "expense").reduce((s, r) => s + r.amount, 0);
@@ -137,6 +153,29 @@ const TransactionsPage = () => {
   const handleLimitChange = (limit: number) => {
     setLimit(limit);
   }
+
+  const handleDeleteClick = (transaction: Transaction) => {
+    setSelected(transaction);
+    setConfirmOpen(true);
+  }
+
+  const handleEditClick = (transaction: Transaction) => {
+    setSelected(transaction);
+    setAddOpen(true);
+  }
+
+  // const handleEditClick = (tx: Row) => {
+  //   // map your table row into dialog's `initial` shape
+  //   setEditTx({
+  //     id: tx.id,
+  //     type: tx.type,
+  //     date: tx.date,                       // YYYY-MM-DD
+  //     category_id: tx.category_id ?? null, // ensure this exists in your row mapping
+  //     description: tx.description ?? null,
+  //     amount_minor: tx.amount_minor,       // ensure API includes this on list rows OR fetch by id
+  //   });
+  //   setAddOpen(true);
+  // };
 
   return (
     <AppContainer maxWidth="lg" sx={{ py: 4 }}>
@@ -173,10 +212,22 @@ const TransactionsPage = () => {
           page={page}
           rowsPerPage={limit}
           onPageChange={handlePageChange}
-          onRowsPerPageChange={handleLimitChange}/>
+          onRowsPerPageChange={handleLimitChange}
+          handleEditClick={handleEditClick}
+          handleDeleteClick={handleDeleteClick}/>
       )}
 
-      <AddTransactionDialog open={addOpen} onClose={() => setAddOpen(false)} onChange={setChange} />
+      <AddTransactionDialog 
+        open={addOpen} 
+        onClose={() => setAddOpen(false)} 
+        onChange={setChange} 
+        mode={selected!=undefined? "edit":"create"}
+        initial={selected}/>
+      
+      <DeleteConfDialog 
+        confirmOpen={confirmOpen}
+        setConfirmOpen={setConfirmOpen} 
+        handleConfirmDelete={handleConfirmDelete} />
     </AppContainer>
   );
 };

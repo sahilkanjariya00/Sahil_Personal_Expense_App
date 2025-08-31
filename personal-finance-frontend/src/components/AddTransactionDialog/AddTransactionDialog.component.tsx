@@ -6,15 +6,19 @@ import { Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material
 import dayjs, { Dayjs } from "dayjs";
 import useToast from "../../hooks/toast";
 import { AppButton, AppDatePicker, AppIconButton, AppSelect, AppTextField } from "../../stories";
-import { createTransaction, type CreateTransactionIn } from "../../APIs/GetTransactions";
+import { createTransaction, updateTransaction, type CreateTransactionIn, type Transaction } from "../../APIs/GetTransactions";
 import { fetchCategories, type CategoryPropsType } from "../../APIs/GetCategories";
 import { CATEGORIES } from "../../Util/Endpoint";
 import { createQueryUrl } from "../../Util/helper";
 import { BUTTON, DATE_FORMATE, EXPENSE_TYPE, REQUIRED } from "../../Util/constants";
 
+type Mode = "create" | "edit";
+
 type AddDialogProps = {
   open: boolean;
   onClose: () => void;
+  mode?: Mode;
+  initial?: Transaction;
   onChange: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
@@ -22,10 +26,29 @@ type Option = string | { label: string; value: any };
 
 type TxnType = "income" | "expense";
 
-const AddTransactionDialog = ({ open, onClose, onChange }: AddDialogProps) => {
+const AddTransactionDialog = ({ open, onClose, onChange, mode, initial }: AddDialogProps) => {
   const {success, error: errort} = useToast();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Option[]>([]);
+
+  const isEdit = (mode ?? "create") === "edit";
+
+  const initialValues = React.useMemo(() => {
+    console.log(initial)
+    if (!isEdit || !initial) {
+      return { type: "expense", date: dayjs().format(DATE_FORMATE) };
+    }
+    return {
+      type: initial.type,
+      date: initial.date? dayjs(initial.date).format(DATE_FORMATE):null, // your DatePicker already accepts string/null
+      category: initial.category_id?{value: initial.category_id, label: initial.category}:null,
+      description: initial.description ?? "",
+      amount: initial.amount,
+    };
+  }, [isEdit, initial]);
+
+  
+
 
   useEffect(() => {
     callCategories();
@@ -50,15 +73,27 @@ const AddTransactionDialog = ({ open, onClose, onChange }: AddDialogProps) => {
   }
 
   const callCreateTransaction = (payload: CreateTransactionIn) => {
-    createTransaction(payload).then(() => {
-      setLoading(false);
-      onChange(prev => !prev);
-      success("Transaction saved!");
-      onClose();
-    }).catch((err) => {
-      errort(err.message||"Error");
-      setLoading(false);
-    });
+    if (isEdit && initial) {
+      updateTransaction(payload).then(()=>{
+        setLoading(false);
+        onChange(prev => !prev);
+        success("Transaction updated!");
+        onClose();
+      }).catch((err)=>{
+        errort(err.message||"Error");
+        setLoading(false);
+      });
+    }else{ 
+      createTransaction(payload).then(() => {
+        setLoading(false);
+        onChange(prev => !prev);
+        success("Transaction saved!");
+        onClose();
+      }).catch((err) => {
+        errort(err.message||"Error");
+        setLoading(false);
+      });
+    }
   }
 
   const onSubmit = async (values: any) => {
@@ -98,7 +133,7 @@ const AddTransactionDialog = ({ open, onClose, onChange }: AddDialogProps) => {
       </DialogTitle>
       <Form
         onSubmit={onSubmit}
-        initialValues={{ type: "expense", date: dayjs().format(DATE_FORMATE) }}
+        initialValues={initialValues}
         validate={validate}
         render={({ handleSubmit, submitting, values }) => (
           <form onSubmit={handleSubmit} noValidate>
@@ -187,7 +222,7 @@ const AddTransactionDialog = ({ open, onClose, onChange }: AddDialogProps) => {
             <DialogActions>
               <AppButton onClick={onClose} color="inherit">{BUTTON.CANCEL}</AppButton>
               <AppButton type="submit" variant="contained" disabled={submitting || loading}>
-                {loading ? BUTTON.SAVING : BUTTON.SAVE}
+                {loading ? (isEdit?BUTTON.UPDATING:BUTTON.SAVING) : (isEdit?BUTTON.UPDATE:BUTTON.SAVE)}
               </AppButton>
             </DialogActions>
           </form>

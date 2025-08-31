@@ -19,3 +19,20 @@ class TransactionBulkItem(BaseModel):
             return None
         v2 = v.strip()
         return v2 or None
+    
+class TransactionUpdate(BaseModel):
+    # user_id intentionally omitted
+    type: Optional[TxnType] = None
+    date: Optional[date] = None
+    category_id: Optional[int] = None
+    description: Optional[str] = None
+    amount: Optional[str] = None
+    amount_minor: Optional[int] = None
+
+    @field_validator("description")
+    @classmethod
+    def norm_desc(cls, v):
+        if v is None:
+            return None
+        v2 = v.strip()
+        return v2 or None

@@ -13,4 +13,12 @@ export const get = (url: string) => {
 export const post = (url: string, data: any) => {
   return axios.post(`${url}`, data);
 };
+
+export const patch = (url: string, data: any) => {
+  return axios.patch(`${url}`,data);
+}
+
+export const del = (url: string) => {
+  return axios.delete(`${url}`);
+}
 export default api;

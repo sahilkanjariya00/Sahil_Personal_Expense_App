@@ -1,5 +1,5 @@
 import type { AxiosResponse } from "axios";
-import { get, post } from "../Util/axios";
+import { del, get, patch, post } from "../Util/axios";
 import { BULK, HostEndpoint, TRANSACTIONS } from "../Util/Endpoint";
 
 type TxnType = "income" | "expense";
@@ -9,17 +9,18 @@ export type Transaction = {
   type: TxnType;
   date: string; // ISO (YYYY-MM-DD)
   category:
-    | "Food"
-    | "Transport"
-    | "Entertainment"
-    | "Utilites"
-    | "Eucation"
-    | "Household"
-    | "Electronics"
-    | "Family"
-    | "Personal Care";
+  | "Food"
+  | "Transport"
+  | "Entertainment"
+  | "Utilites"
+  | "Eucation"
+  | "Household"
+  | "Electronics"
+  | "Family"
+  | "Personal Care";
   description: string;
   amount: number; // INR
+  category_id: number;
 };
 
 export type TransactionsResponse = {
@@ -65,6 +66,15 @@ export type BulkCreateTransactionIn = {
   items: CreateTransactionIn[];
 }
 
+export type UpdateTransactionPropsType = {
+  type?: "expense" | "income";
+  date?: string; // "YYYY-MM-DD"
+  category_id?: number; // REQUIRED
+  description?: string;
+  amount?: string; // rupees string e.g. "250.00"  (or use amount_minor instead)
+  amount_minor?: number; 
+}
+
 export const fetchTransactions = (url: string): Promise<AxiosResponse<TransactionsResponse>> => {
   return get(`${HostEndpoint}${url}`);
 };
@@ -75,4 +85,13 @@ export const createTransaction = (pyaload: CreateTransactionIn): Promise<AxiosRe
 
 export const createBulkTransaction = (pyaload: CreateTransactionIn[]): Promise<AxiosResponse<CreateTransactionResponse[]>> => {
   return post(`${HostEndpoint}${TRANSACTIONS}${BULK}`, pyaload);
+};
+
+
+export const updateTransaction = (pyaload: UpdateTransactionPropsType): Promise<AxiosResponse<CreateTransactionResponse>> => {
+  return patch(`${HostEndpoint}${TRANSACTIONS}${BULK}`, pyaload);
+};
+
+export const deleteTransaction = (transactionId: string): Promise<AxiosResponse<any>> => {
+  return del(`${HostEndpoint}${TRANSACTIONS}/${transactionId}`);
 };

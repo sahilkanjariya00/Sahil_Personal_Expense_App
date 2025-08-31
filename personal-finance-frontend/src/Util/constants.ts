@@ -28,7 +28,8 @@ export const TABLE_HEADING = {
   TYPE: "Type",
   CATEGORY: "Category",
   DESCRIPTION: "Description",
-  AMOUNT: "Amount (INR)"
+  AMOUNT: "Amount (INR)",
+  ACTIONS: "Actions"
 }
 
 export const EXPENSE_TYPE = ["expense", "income"];
@@ -44,7 +45,11 @@ export const BUTTON = {
   RESET: "Reset",
   SHOW_TRANSACTIONS: "Show transactions",
   BACK: "Back",
-  ADD_MORE_RECORD: "Add more record"
+  ADD_MORE_RECORD: "Add more record",
+  UPDATE: "Update",
+  UPDATING: "Updating...",
+  YES_DELETE: "Yes, delete",
+  NO: "No"
 }
 
 export const REQUIRED = "Required";

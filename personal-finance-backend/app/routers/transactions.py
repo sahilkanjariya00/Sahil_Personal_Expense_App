@@ -10,7 +10,7 @@ from sqlalchemy import func
 from ..db import get_session
 from ..models import Transaction, TransactionRead, Category, TxnType
 
-from ..schemas import TransactionBulkItem
+from ..schemas import TransactionBulkItem, TransactionUpdate
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -31,6 +31,7 @@ class TransactionRowOut(SQLModel):
     category: Optional[str] = None
     description: Optional[str] = None
     amount: str  # rupees string like "250.00"
+    category_id: Optional[int] = None
 
 def _rupees_to_minor(rupees_str: str) -> int:
     try:
@@ -138,6 +139,7 @@ def list_transactions(
             Category.name,
             Transaction.description,
             Transaction.amount_minor,
+            Transaction.category_id
         )
         .where(*where)
         .join(Category, Category.id == Transaction.category_id, isouter=True)
@@ -156,9 +158,11 @@ def list_transactions(
             category=r[3],
             description=r[4],
             amount=_minor_to_rupees_str(r[5]),
+            category_id=r[6],
         )
         for r in rows
     ]
+    print(items)
 
     return {
         "items": items,
@@ -253,3 +257,93 @@ def create_transactions_bulk(
         session.refresh(tx)
 
     return prepared
+
+@router.patch("/{tx_id}", response_model=TransactionRead)
+def update_transaction(
+    tx_id: int,
+    payload: TransactionUpdate,
+    session: Session = Depends(get_session),
+):
+    """
+    Partial update:
+    - Cannot edit user_id.
+    - If providing amount, must not provide amount_minor (and vice-versa).
+    - For expense: category_id required (either keep existing or provide one).
+    - For income: category_id must be null.
+    """
+    tx = session.get(Transaction, tx_id)
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    # ---- Validate amount fields (exclusive) ----
+    if payload.amount is not None and payload.amount_minor is not None:
+        raise HTTPException(status_code=400, detail="Provide either 'amount' (rupees) or 'amount_minor' (paise), not both.")
+
+    # ---- Apply simple fields first ----
+    if payload.date is not None:
+        tx.date = payload.date
+
+    if payload.description is not None:
+        tx.description = payload.description  # normalized in validator
+
+    # ---- If type changes, enforce category rules later ----
+    new_type: TxnType = payload.type or tx.type
+
+    # ---- Resolve amount_minor if supplied ----
+    if payload.amount_minor is not None:
+        if payload.amount_minor <= 0:
+            raise HTTPException(status_code=400, detail="'amount_minor' must be > 0")
+        tx.amount_minor = payload.amount_minor
+
+    if payload.amount is not None:
+        tx.amount_minor = _rupees_to_minor(payload.amount)
+
+    # ---- Category rules & validation ----
+    # Determine what category_id should be after update
+    desired_category_id: Optional[int]
+    if payload.category_id is not None:
+        desired_category_id = payload.category_id  # may be None explicitly
+    else:
+        desired_category_id = tx.category_id  # unchanged
+
+    if new_type == TxnType.income:
+        # income must not have category
+        if desired_category_id is not None:
+            raise HTTPException(status_code=400, detail="category_id must be null for income transactions.")
+        tx.type = TxnType.income
+        tx.category_id = None
+    else:
+        # expense must have a valid category
+        if desired_category_id is None:
+            raise HTTPException(status_code=400, detail="category_id is required for expense transactions.")
+        # category must exist and be accessible (global or same user)
+        cat = session.exec(
+            select(Category).where(
+                Category.id == desired_category_id,
+                (Category.user_id == tx.user_id) | (Category.user_id.is_(None)),
+            )
+        ).first()
+        if not cat:
+            raise HTTPException(status_code=404, detail="Category not found or not accessible for this user.")
+        tx.type = TxnType.expense
+        tx.category_id = desired_category_id
+
+    tx.updated_at = datetime.utcnow()
+    session.add(tx)
+    session.commit()
+    session.refresh(tx)
+    return tx
+
+
+@router.delete("/{tx_id}", status_code=204)
+def delete_transaction(
+    tx_id: int,
+    session: Session = Depends(get_session),
+):
+    tx = session.get(Transaction, tx_id)
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    session.delete(tx)
+    session.commit()
+    return None
