@@ -4,6 +4,7 @@ import FormControl from "@mui/material/FormControl";
 import CloseIcon from "@mui/icons-material/Close";
 import { Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
+import useToast from "../../hooks/toast";
 import { AppButton, AppDatePicker, AppIconButton, AppSelect, AppTextField } from "../../stories";
 import { createTransaction, type CreateTransactionIn } from "../../APIs/GetTransactions";
 import { fetchCategories, type CategoryPropsType } from "../../APIs/GetCategories";
@@ -22,6 +23,7 @@ type Option = string | { label: string; value: any };
 type TxnType = "income" | "expense";
 
 const AddTransactionDialog = ({ open, onClose, onChange }: AddDialogProps) => {
+  const {success, error: errort} = useToast();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Option[]>([]);
 
@@ -42,8 +44,8 @@ const AddTransactionDialog = ({ open, onClose, onChange }: AddDialogProps) => {
       }));
 
       setCategories(newCategories);
-    }).catch(() => {
-
+    }).catch((err) => {
+      errort(err.message||"Error");
     });
   }
 
@@ -51,8 +53,10 @@ const AddTransactionDialog = ({ open, onClose, onChange }: AddDialogProps) => {
     createTransaction(payload).then(() => {
       setLoading(false);
       onChange(prev => !prev);
+      success("Transaction saved!");
       onClose();
-    }).catch(() => {
+    }).catch((err) => {
+      errort(err.message||"Error");
       setLoading(false);
     });
   }

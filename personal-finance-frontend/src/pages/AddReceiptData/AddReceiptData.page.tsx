@@ -7,6 +7,7 @@ import { Divider, Chip } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import dayjs, { Dayjs } from 'dayjs';
+import useToast from '../../hooks/toast';
 import {
   FileUpload,
   AppSelect,
@@ -47,6 +48,7 @@ const userId = 1; // until auth
 
 const AddReceiptData = () => {
   const navigate = useNavigate();
+  const { success, error: errort } = useToast();
   const [loadingExtract, setLoadingExtract] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [categories, setCategories] = useState<Option[]>([]);
@@ -69,15 +71,17 @@ const AddReceiptData = () => {
       }));
 
       setCategories(newCategories);
-    }).catch(() => {
+    }).catch((err) => {
+      errort(err.message||"Error");
     });
   }
 
   const uploadBulkTransactions = (payload: CreateTransactionIn[]) => {
     createBulkTransaction(payload).then(() => {
       navigate(ROUTES.default);
-    }).catch(() => {
-
+      success("Transactions saved!");
+    }).catch((err) => {
+      errort(err.message||"Error");
     });
   }
 
@@ -109,7 +113,8 @@ const AddReceiptData = () => {
         }));
         setPendingRows(rows);
         setLoadingExtract(false);
-      }).catch(() => {
+      }).catch((err) => {
+        errort(err.message||"Error")
         setLoadingExtract(false);
       })
   };
