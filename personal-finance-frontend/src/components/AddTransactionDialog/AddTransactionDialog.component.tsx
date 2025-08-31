@@ -34,14 +34,13 @@ const AddTransactionDialog = ({ open, onClose, onChange, mode, initial }: AddDia
   const isEdit = (mode ?? "create") === "edit";
 
   const initialValues = React.useMemo(() => {
-    console.log(initial)
     if (!isEdit || !initial) {
       return { type: "expense", date: dayjs().format(DATE_FORMATE) };
     }
     return {
       type: initial.type,
       date: initial.date? dayjs(initial.date).format(DATE_FORMATE):null, // your DatePicker already accepts string/null
-      category: initial.category_id?{value: initial.category_id, label: initial.category}:null,
+      category: initial.category_id,
       description: initial.description ?? "",
       amount: initial.amount,
     };
@@ -74,7 +73,8 @@ const AddTransactionDialog = ({ open, onClose, onChange, mode, initial }: AddDia
 
   const callCreateTransaction = (payload: CreateTransactionIn) => {
     if (isEdit && initial) {
-      updateTransaction(payload).then(()=>{
+      delete payload.user_id;
+      updateTransaction(payload,initial.id).then(()=>{
         setLoading(false);
         onChange(prev => !prev);
         success("Transaction updated!");

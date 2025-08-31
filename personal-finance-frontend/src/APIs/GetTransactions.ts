@@ -41,7 +41,7 @@ export type ListParams = {
 };
 
 export type CreateTransactionIn = {
-  user_id: number;
+  user_id?: number;
   type: "expense" | "income";
   date: string; // "YYYY-MM-DD"
   category_id?: number; // REQUIRED
@@ -88,8 +88,8 @@ export const createBulkTransaction = (pyaload: CreateTransactionIn[]): Promise<A
 };
 
 
-export const updateTransaction = (pyaload: UpdateTransactionPropsType): Promise<AxiosResponse<CreateTransactionResponse>> => {
-  return patch(`${HostEndpoint}${TRANSACTIONS}${BULK}`, pyaload);
+export const updateTransaction = (pyaload: UpdateTransactionPropsType, transactionId:string): Promise<AxiosResponse<CreateTransactionResponse>> => {
+  return patch(`${HostEndpoint}${TRANSACTIONS}/${transactionId}`, pyaload);
 };
 
 export const deleteTransaction = (transactionId: string): Promise<AxiosResponse<any>> => {

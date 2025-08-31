@@ -164,6 +164,11 @@ const TransactionsPage = () => {
     setAddOpen(true);
   }
 
+  const handleCloseTransactionDialog = () => {
+    setAddOpen(false);
+    setSelected(undefined);
+  }
+
   // const handleEditClick = (tx: Row) => {
   //   // map your table row into dialog's `initial` shape
   //   setEditTx({
@@ -200,7 +205,7 @@ const TransactionsPage = () => {
       <AppStack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ xs: "stretch", md: "center" }} sx={{ mb: 2 }}>
         <DateRangeFilters from={range.from} to={range.to} onChange={setRange} />
         <AppBox sx={{ flexGrow: 1 }} />
-        <SummaryBar rows={transactions} />
+        {/* <SummaryBar rows={transactions} /> */}
       </AppStack>
 
       {isLoading ? (
@@ -219,7 +224,7 @@ const TransactionsPage = () => {
 
       <AddTransactionDialog 
         open={addOpen} 
-        onClose={() => setAddOpen(false)} 
+        onClose={handleCloseTransactionDialog} 
         onChange={setChange} 
         mode={selected!=undefined? "edit":"create"}
         initial={selected}/>

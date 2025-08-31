@@ -2,6 +2,7 @@ from typing import Optional, List
 from datetime import date
 from pydantic import BaseModel, field_validator
 from .models import TxnType
+from datetime import date as Date
 
 class TransactionBulkItem(BaseModel):
     user_id: int
@@ -21,9 +22,8 @@ class TransactionBulkItem(BaseModel):
         return v2 or None
     
 class TransactionUpdate(BaseModel):
-    # user_id intentionally omitted
     type: Optional[TxnType] = None
-    date: Optional[date] = None
+    date: Optional[Date] = None          # <-- IMPORTANT: Optional[Date], not None
     category_id: Optional[int] = None
     description: Optional[str] = None
     amount: Optional[str] = None
