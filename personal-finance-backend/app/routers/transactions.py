@@ -113,7 +113,6 @@ def list_transactions(
       }
     """
     # --- base filter ---
-    print('in get')
     where = [Transaction.user_id == user_id]
 
     if from_:
@@ -162,7 +161,6 @@ def list_transactions(
         )
         for r in rows
     ]
-    print(items)
 
     return {
         "items": items,
