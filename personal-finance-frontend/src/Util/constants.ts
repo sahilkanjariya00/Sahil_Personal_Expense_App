@@ -1,7 +1,8 @@
 export const ROUTES = {
     default:'/',
     summary:'/summary',
-    addReceiptData: 'add-receipt-data'
+    addReceiptData: 'add-receipt-data',
+    login: '/login'
 }
 
 export const ROWSPERPAGEOPTOINS = [5, 10, 20, 50, 100]
@@ -49,7 +50,10 @@ export const BUTTON = {
   UPDATE: "Update",
   UPDATING: "Updating...",
   YES_DELETE: "Yes, delete",
-  NO: "No"
+  NO: "No",
+  LOGIN: "Login"
 }
 
 export const REQUIRED = "Required";
+
+export const KEY = "pfa_access_token";

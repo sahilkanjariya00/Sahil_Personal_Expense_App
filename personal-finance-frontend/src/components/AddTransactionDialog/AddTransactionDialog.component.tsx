@@ -103,7 +103,6 @@ const AddTransactionDialog = ({ open, onClose, onChange, mode, initial }: AddDia
       date: values.date as string,
       description: values.description?.trim() || "",
       amount_minor: Number(values.amount * 100),
-      user_id: 1,
     }
 
     if (values.type == "expense" && values.category >= 0) {

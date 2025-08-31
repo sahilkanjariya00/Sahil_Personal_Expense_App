@@ -5,7 +5,6 @@ from .models import TxnType
 from datetime import date as Date
 
 class TransactionBulkItem(BaseModel):
-    user_id: int
     type: TxnType
     date: date
     category_id: Optional[int] = None
@@ -36,3 +35,20 @@ class TransactionUpdate(BaseModel):
             return None
         v2 = v.strip()
         return v2 or None
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class TokenData(BaseModel):
+    user_id: int
+
+class UserCreate(BaseModel):
+    email: str
+    full_name: str
+    password: str
+
+class UserRead(BaseModel):
+    id: int
+    email: str
+    full_name: str | None = None

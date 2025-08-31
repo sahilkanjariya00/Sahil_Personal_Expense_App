@@ -18,4 +18,6 @@ torchvision
 sentencepiece 
 timm
 protobuf
+python-jose[cryptography] 
+passlib[bcrypt]
 

@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, SQLModel
 
 from ..db import get_session
-from ..models import Category
+from ..models import Category, User
+from ..routers.auth import get_current_user
+
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 
@@ -26,21 +28,22 @@ class CategoryCreateIn(SQLModel):
 @router.get("", response_model=List[CategoryOut])
 def list_categories(
     session: Session = Depends(get_session),
-    user_id: Optional[int] = Query(None, description="If provided, return user's categories; optionally include global"),
+    current_user: User = Depends(get_current_user),
+    # user_id: Optional[int] = Query(None, description="If provided, return user's categories; optionally include global"),
     include_global: bool = Query(True, description="Include global (user_id = NULL) categories when user_id is provided"),
     q: Optional[str] = Query(None, description="Optional name search (case-insensitive substring)"),
 ):
     stmt = select(Category)
 
-    if user_id is None:
+    if current_user.id is None:
         # Only global categories
         stmt = stmt.where(Category.user_id.is_(None))
     else:
         # User's categories + optionally global
         if include_global:
-            stmt = stmt.where((Category.user_id == user_id) | (Category.user_id.is_(None)))
+            stmt = stmt.where((Category.user_id == current_user.id) | (Category.user_id.is_(None)))
         else:
-            stmt = stmt.where(Category.user_id == user_id)
+            stmt = stmt.where(Category.user_id == current_user.id)
 
     if q:
         # SQLite: LIKE is case-insensitive by default for ASCII

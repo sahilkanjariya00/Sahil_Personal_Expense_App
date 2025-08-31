@@ -37,6 +37,8 @@ pip install "torch==2.*" torchvision --index-url https://download.pytorch.org/wh
 
 pip install transformers accelerate pillow  python-multipart sentencepiece timm protobuf
 
+pip install python-jose[cryptography] passlib[bcrypt]
+
 # Ubuntu/Debian
 sudo apt-get install -y tesseract-ocr poppler-utils
 ```

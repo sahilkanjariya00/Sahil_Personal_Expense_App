@@ -8,15 +8,15 @@ from sqlmodel import Session, select, SQLModel, Field
 from sqlalchemy import func
 
 from ..db import get_session
-from ..models import Transaction, TransactionRead, Category, TxnType
-
+from ..models import Transaction, TransactionRead, Category, TxnType, User
 from ..schemas import TransactionBulkItem, TransactionUpdate
+from ..routers.auth import get_current_user
+
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 
 class TransactionCreateIn(SQLModel):
-    user_id: int
     type: TxnType                 # "expense" | "income"
     date: date                    # "YYYY-MM-DD"
     category_id: Optional[int] = None   # required only for expense; ignored for income
@@ -43,7 +43,7 @@ def _minor_to_rupees_str(minor: int) -> str:
     return f"{Decimal(minor) / Decimal(100):.2f}"
 
 @router.post("", response_model=TransactionRead, status_code=201)
-def create_transaction(payload: TransactionCreateIn, session: Session = Depends(get_session)):
+def create_transaction(payload: TransactionCreateIn, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     # --- amount validation ---
     if payload.amount_minor is None and payload.amount is None:
         raise HTTPException(status_code=400, detail="Provide either 'amount' (rupees) or 'amount_minor' (paise).")
@@ -65,7 +65,7 @@ def create_transaction(payload: TransactionCreateIn, session: Session = Depends(
         cat = session.exec(
             select(Category).where(
                 Category.id == payload.category_id,
-                (Category.user_id == payload.user_id) | (Category.user_id.is_(None)),
+                (Category.user_id == current_user.id) | (Category.user_id.is_(None)),
             )
         ).first()
         if not cat:
@@ -76,7 +76,7 @@ def create_transaction(payload: TransactionCreateIn, session: Session = Depends(
         category_id = None
 
     tx = Transaction(
-        user_id=payload.user_id,
+        user_id=current_user.id,
         type=payload.type,
         date=payload.date,
         category_id=category_id,
@@ -95,25 +95,15 @@ def create_transaction(payload: TransactionCreateIn, session: Session = Depends(
 @router.get("", response_model=dict)
 def list_transactions(
     session: Session = Depends(get_session),
-    user_id: int = Query(..., description="Current user id"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     from_: Optional[date] = Query(None, alias="from"),
     to: Optional[date] = None,
     type: Optional[TxnType] = None,
     category_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Returns:
-      {
-        "items": [{id, date, type, category, description, amount}],
-        "page": 1,
-        "limit": 20,
-        "total": 123
-      }
-    """
-    # --- base filter ---
-    where = [Transaction.user_id == user_id]
+    where = [Transaction.user_id == current_user.id]
 
     if from_:
         where.append(Transaction.date >= from_)
@@ -124,12 +114,12 @@ def list_transactions(
     if category_id:
         where.append(Transaction.category_id == category_id)
 
-    # --- total count ---
+    # total count
     total = session.exec(
         select(func.count()).select_from(Transaction).where(*where)
-    ).one()
+    ).first() or 0
 
-    # --- query page, latest first ---
+    # query page
     stmt = (
         select(
             Transaction.id,
@@ -138,7 +128,7 @@ def list_transactions(
             Category.name,
             Transaction.description,
             Transaction.amount_minor,
-            Transaction.category_id
+            Transaction.category_id,
         )
         .where(*where)
         .join(Category, Category.id == Transaction.category_id, isouter=True)
@@ -149,7 +139,7 @@ def list_transactions(
 
     rows = session.exec(stmt).all()
 
-    items: List[TransactionRowOut] = [
+    items = [
         TransactionRowOut(
             id=r[0],
             date=r[1],
@@ -162,17 +152,14 @@ def list_transactions(
         for r in rows
     ]
 
-    return {
-        "items": items,
-        "page": page,
-        "limit": limit,
-        "total": total,
-    }
+    return {"items": items, "page": page, "limit": limit, "total": total}
+
 
 @router.post("/bulk", response_model=List[TransactionRead], status_code=201)
 def create_transactions_bulk(
     items: List[TransactionBulkItem],
     session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
     if not items:
         raise HTTPException(status_code=400, detail="Provide at least one transaction.")
@@ -180,7 +167,7 @@ def create_transactions_bulk(
     # Collect per-row errors first (so user sees all problems at once)
     errors: List[Dict[str, Any]] = []
 
-    # Preload category IDs referenced, grouped by user/global
+    # Preload categories referenced
     cat_ids = {it.category_id for it in items if it.category_id is not None}
     cats_by_id: Dict[int, Category] = {}
     if cat_ids:
@@ -194,7 +181,9 @@ def create_transactions_bulk(
         row_errs: List[str] = []
 
         # amount validation (exactly one provided)
-        if (it.amount is None and it.amount_minor is None) or (it.amount is not None and it.amount_minor is not None):
+        if (it.amount is None and it.amount_minor is None) or (
+            it.amount is not None and it.amount_minor is not None
+        ):
             row_errs.append("Provide either 'amount' (rupees) or 'amount_minor' (paise), but not both.")
 
         # type/category rules
@@ -208,7 +197,7 @@ def create_transactions_bulk(
         # category existence / access (global or same user)
         if it.category_id is not None:
             cat = cats_by_id.get(it.category_id)
-            if not cat or not (cat.user_id is None or cat.user_id == it.user_id):
+            if not cat or not (cat.user_id is None or cat.user_id == current_user.id):
                 row_errs.append("Category not found or not accessible for this user.")
 
         # compute amount_minor
@@ -222,7 +211,7 @@ def create_transactions_bulk(
             try:
                 amount_minor = _rupees_to_minor(it.amount)
             except HTTPException as he:
-                row_errs.append(he.detail)
+                row_errs.append(str(he.detail))
 
         if amount_minor is None:
             row_errs.append("Resolved amount is invalid or <= 0.")
@@ -232,12 +221,12 @@ def create_transactions_bulk(
             continue
 
         tx = Transaction(
-            user_id=it.user_id,
+            user_id=current_user.id,
             type=it.type,
             date=it.date,
-            category_id=it.category_id,
-            description=it.description,
-            amount_minor=amount_minor,  # type: ignore[arg-type]
+            category_id=None if it.type == TxnType.income else it.category_id, 
+            description=(it.description or "").strip() or None,
+            amount_minor=amount_minor,                     
             created_at=now,
             updated_at=now,
         )
@@ -250,7 +239,6 @@ def create_transactions_bulk(
     # Persist in one transaction
     session.add_all(prepared)
     session.commit()
-    # refresh to get IDs
     for tx in prepared:
         session.refresh(tx)
 
@@ -261,9 +249,11 @@ def update_transaction(
     tx_id: int,
     payload: TransactionUpdate,
     session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),   # ← inject user from JWT
 ):
     """
-    Partial update:
+    Partial update (user-scoped):
+    - Must belong to current_user.
     - Cannot edit user_id.
     - If providing amount, must not provide amount_minor (and vice-versa).
     - For expense: category_id required (either keep existing or provide one).
@@ -273,9 +263,16 @@ def update_transaction(
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
+    # Enforce ownership
+    if tx.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed to modify this transaction")
+
     # ---- Validate amount fields (exclusive) ----
     if payload.amount is not None and payload.amount_minor is not None:
-        raise HTTPException(status_code=400, detail="Provide either 'amount' (rupees) or 'amount_minor' (paise), not both.")
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either 'amount' (rupees) or 'amount_minor' (paise), not both.",
+        )
 
     # ---- Apply simple fields first ----
     if payload.date is not None:
@@ -311,14 +308,13 @@ def update_transaction(
         tx.type = TxnType.income
         tx.category_id = None
     else:
-        # expense must have a valid category
+        # expense must have a valid category (global or owned by current user)
         if desired_category_id is None:
             raise HTTPException(status_code=400, detail="category_id is required for expense transactions.")
-        # category must exist and be accessible (global or same user)
         cat = session.exec(
             select(Category).where(
                 Category.id == desired_category_id,
-                (Category.user_id == tx.user_id) | (Category.user_id.is_(None)),
+                (Category.user_id == current_user.id) | (Category.user_id.is_(None)),  # ← user/global
             )
         ).first()
         if not cat:
@@ -337,11 +333,17 @@ def update_transaction(
 def delete_transaction(
     tx_id: int,
     session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),  # enforce auth
 ):
     tx = session.get(Transaction, tx_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
+    # Ownership check
+    if tx.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed to delete this transaction")
+
     session.delete(tx)
     session.commit()
+    # 204 No Content has no body
     return None

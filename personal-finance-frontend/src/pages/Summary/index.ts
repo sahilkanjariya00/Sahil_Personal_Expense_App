@@ -1,3 +1,3 @@
-import SummaryPage from "./Summary.component";
+import SummaryPage from "./Summary.page";
 
 export default SummaryPage;

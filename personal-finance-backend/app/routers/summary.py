@@ -1,10 +1,13 @@
+from datetime import date as Date
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select
 from sqlalchemy import func
 
 from ..db import get_session
-from ..models import Transaction, Category, TxnType
+from ..models import Transaction, Category, TxnType, User
+from ..routers.auth import get_current_user
+
 
 router = APIRouter(prefix="/summary", tags=["summary"])
 
@@ -20,9 +23,9 @@ def _minor_to_rupees(n: int) -> float:
 @router.get("/category")
 def summary_by_category(
     session: Session = Depends(get_session),
-    user_id: int = Query(...),
-    from_: Optional[str] = Query(None, alias="from"),   # "YYYY-MM-DD"
-    to: Optional[str] = Query(None),                    # "YYYY-MM-DD"
+    from_: Optional[Date] = Query(None, alias="from"),  # YYYY-MM-DD
+    to: Optional[Date] = Query(None),                   # YYYY-MM-DD
+    current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """
     Returns:
@@ -32,13 +35,13 @@ def summary_by_category(
       "total": 2124.5                        // rupees
     }
     """
-    where = [Transaction.user_id == user_id, Transaction.type == TxnType.expense]
+    # user-scoped + expense only
+    where = [Transaction.user_id == current_user.id, Transaction.type == TxnType.expense]
     if from_:
         where.append(Transaction.date >= from_)
     if to:
         where.append(Transaction.date <= to)
 
-    # COALESCE category name -> 'Uncategorized'
     category_name = func.coalesce(Category.name, "Uncategorized")
 
     stmt = (
@@ -59,10 +62,10 @@ def summary_by_category(
     total_minor = 0
 
     for cat, sum_minor in rows:
+        sum_minor_int = int(sum_minor or 0)
         labels.append(cat)
-        rupees = _minor_to_rupees(int(sum_minor or 0))
-        values.append(rupees)
-        total_minor += int(sum_minor or 0)
+        values.append(_minor_to_rupees(sum_minor_int))
+        total_minor += sum_minor_int
 
     return {
         "labels": labels,
@@ -76,8 +79,8 @@ def summary_by_category(
 @router.get("/monthly")
 def summary_monthly(
     session: Session = Depends(get_session),
-    user_id: int = Query(...),
-    year: int = Query(...),
+    year: int = Query(..., description="Year, e.g., 2025"),
+    current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """
     Returns:
@@ -87,11 +90,10 @@ def summary_monthly(
       "values": [100.0, 0.0, 250.5, ...]  // rupees per month, expenses only
     }
     """
-    # SQLite month extraction: strftime('%m', date) -> '01'..'12'
     month_expr = func.strftime("%m", Transaction.date)
 
     where = [
-        Transaction.user_id == user_id,
+        Transaction.user_id == current_user.id,
         Transaction.type == TxnType.expense,
         func.strftime("%Y", Transaction.date) == str(year),
     ]
