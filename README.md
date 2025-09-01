@@ -57,5 +57,30 @@ npm run dev
 # run storybook
 npm run storybook
 ```
+---
+## App Features
+-> Ability to create, update and delete a income / expenses entry.
+
+-> List all income / expenses in a time range.
+
+-> Expense by category and expense by year graph.
+
+-> Ability to extract expenses from a uploaded receipt [POS](Images, pdf).
+
+-> Pagination of the income / expense list api.
+
+-> Supports email/password based authentication(JWT Token) and multiple user accounts.
+
+---
+## Current Database Users (Login after starting the both servies)
+### User 1:
+email: abc@gmail.com
+
+password: 123
+
+### User 2:
+email: abc2@gmail.com
+
+password: 123456
 
 

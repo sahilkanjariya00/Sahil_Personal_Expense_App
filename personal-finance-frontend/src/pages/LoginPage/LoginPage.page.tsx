@@ -31,7 +31,6 @@ const LoginPage = () => {
   const errs: Partial<Record<keyof ValuesType, string>> = {};
   if (!v.email) errs.email = "Email is required";
   if (!v.password) errs.password = "Password is required";
-  // if (v.password && v.password.length < 6) errs.password = "Min 6 characters";
   return errs;
 };
 
