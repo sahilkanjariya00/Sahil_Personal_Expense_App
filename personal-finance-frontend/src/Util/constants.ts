@@ -2,7 +2,8 @@ export const ROUTES = {
     default:'/',
     summary:'/summary',
     addReceiptData: 'add-receipt-data',
-    login: '/login'
+    login: '/login',
+    register: '/register'
 }
 
 export const ROWSPERPAGEOPTOINS = [5, 10, 20, 50, 100]
@@ -51,7 +52,9 @@ export const BUTTON = {
   UPDATING: "Updating...",
   YES_DELETE: "Yes, delete",
   NO: "No",
-  LOGIN: "Login"
+  LOGIN: "Login",
+  SIGNIN: "Sign In",
+  LOGOUT: "Logout"
 }
 
 export const REQUIRED = "Required";

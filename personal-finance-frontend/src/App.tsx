@@ -1,5 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
-import { AddReceiptData, Dashboard, LoginPage, SummaryPage } from './pages'
+import { AddReceiptData, Dashboard, LoginPage, RegisterPage, SummaryPage } from './pages'
 import { useAuth } from './hooks/authHook';
 import { ROUTES } from './Util/constants'
 import './App.css'
@@ -11,7 +11,9 @@ function App() {
       <Routes>
         {!isAuthenticated ?
           <>
+            <Route path={"*"} element={<LoginPage />} />
             <Route path={ROUTES.login} element={<LoginPage />} />
+            <Route path={ROUTES.register} element={<RegisterPage />} />
           </> :
           <>
             <Route path={'*'} element={<Dashboard/>}></Route>

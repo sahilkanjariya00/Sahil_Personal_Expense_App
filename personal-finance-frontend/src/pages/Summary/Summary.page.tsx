@@ -158,6 +158,28 @@ const Summary = () => {
     navigate(ROUTES.default);
   }
 
+  const handleFromChange = (v: Dayjs) => {
+      const newFrom = v.startOf("day");
+      // if TO exists and new FROM > TO, clamp TO up to FROM
+      if (to && dayjs(to).isBefore(newFrom, "day")) {
+        setFrom(newFrom.format(DATE_FORMATE));
+        setTo(newFrom.format(DATE_FORMATE));
+      } else {
+        setFrom(newFrom.format(DATE_FORMATE));
+      }
+    };
+  
+  const handleToChange = (v: Dayjs) => {
+      const newTo = v.endOf("day"); // endOf not strictly necessary if you store dates only
+      // if FROM exists and TO < FROM, clamp FROM down to TO
+      if (from && dayjs(from).isAfter(newTo, "day")) {
+        setFrom(newTo.format(DATE_FORMATE));
+        setTo(newTo.format(DATE_FORMATE));
+      } else {
+        setTo(newTo.format(DATE_FORMATE));
+      }
+    };
+
   return (
     <AppContainer maxWidth="lg" sx={{ py: 4 }}>
       <AppStack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
@@ -181,7 +203,7 @@ const Summary = () => {
                   label="From"
                   value={from ? dayjs(from) : null}
                   onChange={(v) =>
-                    setFrom((v as Dayjs).format(DATE_FORMATE))
+                    handleFromChange(v as Dayjs)
                   }
                 />
               </AppBox>
@@ -190,7 +212,7 @@ const Summary = () => {
                   label="To"
                   value={to ? dayjs(to) : null}
                   onChange={(v) =>
-                    setTo((v as Dayjs).format(DATE_FORMATE))
+                    handleToChange(v as Dayjs)
                   }
                 />
               </AppBox>

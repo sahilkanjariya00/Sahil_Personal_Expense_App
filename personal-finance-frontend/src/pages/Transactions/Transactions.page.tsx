@@ -12,6 +12,7 @@ import {
   AppBox,
 } from "../../stories";
 import useToast from "../../hooks/toast";
+import { useAuth } from "../../hooks/authHook";
 import { AddTransactionDialog, DeleteConfDialog, TransactionsTable } from "../../components";
 import { deleteTransaction, fetchTransactions, type Transaction } from "../../APIs/GetTransactions";
 import { BUTTON, DATE_FORMATE, ROUTES, ROWSPERPAGEOPTOINS } from "../../Util/constants";
@@ -25,6 +26,48 @@ type DateRangeFiltersType = {
 }
 
 const DateRangeFilters = ({ from, to, onChange }: DateRangeFiltersType) => {
+  const handleFromChange = (v: Dayjs | null) => {
+  if (!v) {
+      // clearing FROM keeps TO as-is
+      onChange({ from: undefined, to });
+      return;
+    }
+    const newFrom = v.startOf("day");
+    // if TO exists and new FROM > TO, clamp TO up to FROM
+    if (to && dayjs(to).isBefore(newFrom, "day")) {
+      onChange({
+        from: newFrom.format(DATE_FORMATE),
+        to: newFrom.format(DATE_FORMATE),
+      });
+    } else {
+      onChange({
+        from: newFrom.format(DATE_FORMATE),
+        to,
+      });
+    }
+  };
+
+const handleToChange = (v: Dayjs | null) => {
+  if (!v) {
+      // clearing TO keeps FROM as-is
+      onChange({ from, to: undefined });
+      return;
+    }
+    const newTo = v.endOf("day"); // endOf not strictly necessary if you store dates only
+    // if FROM exists and TO < FROM, clamp FROM down to TO
+    if (from && dayjs(from).isAfter(newTo, "day")) {
+      onChange({
+        from: newTo.format(DATE_FORMATE),
+        to: newTo.format(DATE_FORMATE),
+      });
+    } else {
+      onChange({
+        from,
+        to: newTo.format(DATE_FORMATE),
+      });
+    }
+  };
+
   const handleFromClear = () => {
     onChange({ from: undefined, to });
   }
@@ -39,7 +82,7 @@ const DateRangeFilters = ({ from, to, onChange }: DateRangeFiltersType) => {
         <AppDatePicker
           label="From"
           value={from ? dayjs(from) : null}
-          onChange={(v) => onChange({ from: v ? (v as Dayjs).format(DATE_FORMATE) : undefined, to })}
+          onChange={(v) => handleFromChange(v as Dayjs | null)}
           slotProps={{
             textField: {
               fullWidth: true,
@@ -58,7 +101,7 @@ const DateRangeFilters = ({ from, to, onChange }: DateRangeFiltersType) => {
         <AppDatePicker
           label="To"
           value={to ? dayjs(to) : null}
-          onChange={(v) => onChange({ from, to: v ? (v as Dayjs).format(DATE_FORMATE) : undefined })}
+          onChange={(v) => handleToChange(v as Dayjs | null)}
           slotProps={{
             textField: {
               fullWidth: true,
@@ -79,6 +122,7 @@ const DateRangeFilters = ({ from, to, onChange }: DateRangeFiltersType) => {
 
 const TransactionsPage = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const { success, error: errort } = useToast();
   const [addOpen, setAddOpen] = React.useState(false);
   const [range, setRange] = React.useState<{ from?: string; to?: string }>({});
@@ -169,18 +213,10 @@ const TransactionsPage = () => {
     setSelected(undefined);
   }
 
-  // const handleEditClick = (tx: Row) => {
-  //   // map your table row into dialog's `initial` shape
-  //   setEditTx({
-  //     id: tx.id,
-  //     type: tx.type,
-  //     date: tx.date,                       // YYYY-MM-DD
-  //     category_id: tx.category_id ?? null, // ensure this exists in your row mapping
-  //     description: tx.description ?? null,
-  //     amount_minor: tx.amount_minor,       // ensure API includes this on list rows OR fetch by id
-  //   });
-  //   setAddOpen(true);
-  // };
+  const handleLogOut = () => {
+    logout();
+    navigate(ROUTES.login);
+  }
 
   return (
     <AppContainer maxWidth="lg" sx={{ py: 4 }}>
@@ -198,6 +234,9 @@ const TransactionsPage = () => {
           </AppButton>
           <AppButton variant="contained" startIcon={<AddIcon />} onClick={() => setAddOpen(true)}>
             {BUTTON.ADD_INCOME_EXPENSE}
+          </AppButton>
+          <AppButton variant="contained" onClick={()=>handleLogOut()}>
+            {BUTTON.LOGOUT}
           </AppButton>
         </AppStack>
       </AppStack>

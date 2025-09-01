@@ -8,5 +8,6 @@ export const MONTHLY = '/monthly';
 export const RECEIPT = '/extract/receipt';
 export const BULK = '/bulk';
 export const AUTH = '/auth';
-export const LOGIN = 'login'
+export const LOGIN = '/login'
+export const REGISTER = '/register'
 
